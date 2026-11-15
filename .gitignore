@@ -1,0 +1,40 @@
+# ===== 编译产物 =====
+MDK-ARM/f4/
+MDK-ARM/build/
+*.axf
+*.hex
+*.bin
+*.map
+*.lst
+*.o
+*.d
+*.crf
+*.lnp
+*.dep
+*.htm
+*.__i
+
+# ===== Keil 个人设置 =====
+MDK-ARM/*.uvguix.*
+MDK-ARM/*.uvoptx
+MDK-ARM/DebugConfig/
+MDK-ARM/EventRecorderStub.scvd
+
+# ===== 第三方库（CubeMX 可重新生成）=====
+Drivers/
+
+# ===== DSH 临时渲染输出 =====
+.dsh-office-*/
+
+# ===== 编辑器 / 系统 =====
+.vscode/
+MDK-ARM/.vscode/
+MDK-ARM/.eide/
+MDK-ARM/.cmsis/
+MDK-ARM/*.code-workspace
+__pycache__/
+*.pyc
+Thumbs.db
+desktop.ini
+*.bak
+*~
