@@ -24,20 +24,22 @@
 /* ======================= 可调参数（调循迹只动这一段） ======================= */
 
 /* 正常循迹的基础车速 mm/s */
-#define BASE_MM_S          300.0f
+#define BASE_MM_S          400.0f
 
 /* 比例增益：每 1 个误差单位给多少 mm/s 的差速。误差范围 ±7 */
 #define KP_TRACE            30.0f
 
-/* 微分增益：作用在"每拍误差变化量"上，抑制摆动。太大对传感器跳变敏感 */
-#define KD_TRACE            30.0f
+/* 微分增益：作用在"每拍误差变化量"上，抑制摆动。太大对传感器跳变敏感
+ * ★ 它没有除以采样周期，等效阻尼 = KD × CTRL_PERIOD_MS。
+ *   周期 20ms → 10ms 时等效阻尼砍半，所以 KD 要翻倍（15 → 30）补回来。 */
+#define KD_TRACE            15.0f
 
 /* 车轮速度限幅：内侧轮别停死（停死等于原地转，容易拖出赛道） */
 #define SPEED_MIN_MM_S      60.0f
 #define SPEED_MAX_MM_S     900.0f
 
 /* 丢线时的找线差速 mm/s */
-#define SEARCH_STEER_MM_S  400.0f
+#define SEARCH_STEER_MM_S  340.0f
 
 /* 判为"宽黑线"（十字/圆环/终点）所需的最少探头数，8 路里 5 路以上算宽 */
 #define WIDE_COUNT          6u
@@ -60,7 +62,7 @@
 #define FINISH_RUN_MM       200.0f
 
 /* 终点冲刺段的速度 mm/s */
-#define FINISH_SPEED_MM_S   300.0f
+#define  FINISH_SPEED_MM_S   350.0f
 
 /* 全白持续多少拍放弃找线并停车。50 拍 = 1s（现在只做统计不再停车） */
 #define LOST_STOP_TICKS     50u
@@ -71,7 +73,7 @@
 /* ============================ 盲走（断线） ============================ */
 
 /* 盲走速度 mm/s —— 比循迹略慢，冲过断口更可控 */
-#define BLIND_SPEED_MM_S    450.0f
+#define BLIND_SPEED_MM_S    500.0f
 
 /* 航向保持增益：每 1° 偏差给多少 mm/s 的差速 */
 #define KP_YAW              3.0f
@@ -531,16 +533,16 @@ void Trace_Tick(void)
     }
 
     /* ---------- 5) 正常循迹 ---------- */
-    e  = calc_error(s_mask);
-    de = e - s_last_e;
+    e = calc_error(s_mask);
 
 #if (TRACE_REVERSE != 0)
-    e  = -e;
-    de = -de;
+    e = -e;
 #endif
 
-    steer   = (KP_TRACE * e) + (KD_TRACE * de);
+    de = e - s_last_e;
     s_last_e = e;
+
+    steer   = (KP_TRACE * e) + (KD_TRACE * de);
     s_error  = e;
     s_steer  = steer;
 
