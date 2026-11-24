@@ -1,5 +1,5 @@
 #include "PID.h"
-void PID_init(PID *pid, float Kp, float Ki, float Kd, float target)
+void PID_init(PID_t *pid, float Kp, float Ki, float Kd, float target)
 {
     pid->Kp = Kp;
     pid->Ki = Ki;
@@ -8,10 +8,10 @@ void PID_init(PID *pid, float Kp, float Ki, float Kd, float target)
     pid->error = 0.0f;
     pid->i= 0.0f;
     pid->derivative = 0.0f;
-    pid->i_Max = 100.0f; // Set a default maximum value for the integral term
+    pid->i_Max = 100.0f; 
 }
 
-void PID_Reset(PID *pid)
+void PID_Reset(PID_t *pid)
 {
     pid->error = 0.0f;
     pid->i = 0.0f;

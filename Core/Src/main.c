@@ -18,13 +18,18 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "i2c.h"
 #include "tim.h"
+#include "usart.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "Motor_base.h"
-#include "PID.h"
+#include "Motor_advance.h"
+#include "Gray.h"
+#include "Trace.h"
+#include "Mpu6050.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -33,7 +38,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-volatile float vL = 0.0f, vR = 0.0f;
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -91,20 +96,30 @@ int main(void)
   MX_TIM2_Init();
   MX_TIM3_Init();
   MX_TIM6_Init();
-  /* USER CODE BEGIN 2 */
-  HAL_TIM_Base_Start_IT(&htim6);
+  MX_USART2_UART_Init();
+  MX_I2C1_Init();
+ /* USER CODE BEGIN 2 */
+  HAL_TIM_Base_Start_IT(&htim6);   /* TIM6 = 20ms 控制节拍 */
   Motor_Init();
+  Gray_Init();
+  MotorAdvance_Init();
+
+  Mpu_Init();          /* 陀螺仪；失败也不影响循迹，盲走会退回打舵找线 */
+  Mpu_Calibrate();     /* 校准零偏：这 1 秒内车必须完全静止 */
+
+  Trace_Init();
+  Trace_Start();
   /* USER CODE END 2 */
+
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	if (g_ctrl_tick)
-	{
-		g_ctrl_tick = 0;
-		vL = Motor_GetSpeedL();     /* mm/s */
-		vR = Motor_GetSpeedR();     /* mm/s */
-		Motor_SetSpeed(30, 30);
+    if (g_ctrl_tick)
+    {
+      g_ctrl_tick = 0;
+      Trace_Tick();          /* 读灰度 + 陀螺仪 -> 设定目标速度 */
+      MotorAdvance_Tick();   /* 速度环 -> 下发 PWM */
     }
 
     /* USER CODE END WHILE */

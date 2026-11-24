@@ -25,6 +25,7 @@ Drivers/
 
 # ===== DSH 临时渲染输出 =====
 .dsh-office-*/
+.dsh-tmp-render/
 
 # ===== 编辑器 / 系统 =====
 .vscode/

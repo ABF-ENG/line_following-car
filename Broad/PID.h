@@ -10,8 +10,8 @@ typedef struct {
     float i;
     float derivative;
     float i_Max;
-}PID;
+}PID_t;
 
-void PID_init(PID *pid, float Kp, float Ki, float Kd, float target);
-void PID_Reset(PID *pid);
+void PID_init(PID_t *pid, float Kp, float Ki, float Kd, float target);
+void PID_Reset(PID_t *pid);
 #endif
