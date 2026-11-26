@@ -69,5 +69,26 @@ extern volatile uint8_t g_trace_fin;     /* 1 = 正在终点冲刺 */
 extern volatile uint8_t g_trace_ab;      /* 1 = 盲走已出来，正在计 60cm */
 extern volatile uint8_t g_trace_edge;    /* X8 边灯已亮过几次 */
 extern volatile uint8_t g_trace_ft;      /* 1 = 正在强制转向 */
+extern volatile uint8_t g_trace_lev;     /* 第几次丢线（诊断：盲走应该是第 8 次） */
+extern volatile float   g_trace_dist;    /* 累计里程 mm（诊断用） */
+
+/* ---- 运行时可改的调参量（串口命令 p/d/b/s/l/y/g/m 可写）---- */
+extern float g_base_mm_s;       /* 循迹基础车速 mm/s */
+extern float g_kp_trace;        /* 循迹比例增益 */
+extern float g_kd_trace;        /* 循迹微分增益 */
+extern float g_search_steer;    /* 丢线找线差速 mm/s */
+extern float g_blind_speed;     /* 盲走速度 mm/s */
+extern float g_kp_yaw;          /* 盲走航向增益 mm/s per ° */
+extern float g_kd_yaw_rate;     /* 航向速率阻尼 (mm/s)/(°/s)，0 = 关闭 */
+extern float g_steer_limit;     /* 航向修正差速限幅 mm/s */
+extern float g_blind_offset;    /* 盲走目标航向偏移角 度 */
+extern float g_island_turn_speed;  /* 环岛强制转向速度 mm/s */
+extern float g_island_turn_deg;    /* 环岛强制转向角度 度 */
+extern float g_lpf_alpha;          /* 误差低通系数，1.0 = 关闭 */
+extern float g_island_ramp_mm;     /* 环岛转向后速度渐变距离 mm */
+extern float g_slow_start_mm;      /* 第5个直角后再走多少 mm 开始减速 */
+extern float g_slow_speed;         /* 盲走前的慢速 mm/s */
+extern uint16_t g_loss_debounce_ms; /* 丢线计数消抖时间 ms */
+extern float g_corner6_gap_mm;     /* 第6个弯到第7个弯的最小间距 mm */
 
 #endif

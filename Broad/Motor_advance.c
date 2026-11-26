@@ -31,7 +31,8 @@
 /* 积分限幅（折成占空比 %） */
 #define INTEG_MAX_DUTY       40.0f
 
-/* 目标斜坡：每拍(20ms)最多变化多少 mm/s。0 = 不限制 */
+/* 目标斜坡：每拍(20ms)最多变化多少 mm/s。0 = 不限制
+ * 60 mm/s per 20ms = 3000 mm/s² */
 #define TARGET_SLEW_PER_TICK 60.0f
 
 /* 目标速度上限 mm/s，防止误传大数 */

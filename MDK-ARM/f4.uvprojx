@@ -1006,6 +1006,16 @@
               <FileType>5</FileType>
               <FilePath>..\Broad\Mpu6050.h</FilePath>
             </File>
+            <File>
+              <FileName>Debug_uart.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Broad\Debug_uart.c</FilePath>
+            </File>
+            <File>
+              <FileName>Debug_uart.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Broad\Debug_uart.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

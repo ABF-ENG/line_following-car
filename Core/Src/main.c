@@ -30,6 +30,7 @@
 #include "Gray.h"
 #include "Trace.h"
 #include "Mpu6050.h"
+#include "Debug_uart.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -60,6 +61,33 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+/* ============================ 发车按键 ============================
+ * 按键2（PC2）：按下 → 陀螺仪重新校准（约 1 秒）→ 发车开始循迹
+ *
+ *   上电后车不动，等这个键才出发。
+ *   校准放在这里而不是上电时，是因为发车前车一定已经摆好、静止。
+ *
+ *   想换引脚改下面两行即可（PC0 = 急停，PC1 空闲）。 */
+#define START_KEY_PORT      GPIOC
+#define START_KEY_PIN       GPIO_PIN_2
+
+static void start_key_init(void)
+{
+    GPIO_InitTypeDef g = {0};
+
+    __HAL_RCC_GPIOC_CLK_ENABLE();
+
+    g.Pin  = START_KEY_PIN;
+    g.Mode = GPIO_MODE_INPUT;
+    g.Pull = GPIO_PULLUP;           /* 上拉：松开 = 1，按下 = 0 */
+    HAL_GPIO_Init(START_KEY_PORT, &g);
+}
+
+static uint8_t start_key_down(void)
+{
+    return (HAL_GPIO_ReadPin(START_KEY_PORT, START_KEY_PIN) == GPIO_PIN_RESET) ? 1u : 0u;
+}
 
 /* USER CODE END 0 */
 
@@ -99,16 +127,17 @@ int main(void)
   MX_USART2_UART_Init();
   MX_I2C1_Init();
  /* USER CODE BEGIN 2 */
-  HAL_TIM_Base_Start_IT(&htim6);   /* TIM6 = 20ms 控制节拍 */
+  HAL_TIM_Base_Start_IT(&htim6);   /* TIM6 = 10ms 控制节拍 */
   Motor_Init();
   Gray_Init();
   MotorAdvance_Init();
 
   Mpu_Init();          /* 陀螺仪；失败也不影响循迹，盲走会退回打舵找线 */
-  Mpu_Calibrate();     /* 校准零偏：这 1 秒内车必须完全静止 */
 
-  Trace_Init();
-  Trace_Start();
+  Trace_Init();        /* 只初始化，不发车 —— 等按键2 */
+
+  start_key_init();    /* 发车按键 PC2 */
+  Dbg_Init();          /* 串口调试输出（SerialPlot） */
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -118,9 +147,43 @@ int main(void)
     if (g_ctrl_tick)
     {
       g_ctrl_tick = 0;
-      Trace_Tick();          /* 读灰度 + 陀螺仪 -> 设定目标速度 */
-      MotorAdvance_Tick();   /* 速度环 -> 下发 PWM */
+
+      /* ---------- 按键2：校准 + 发车 ---------- */
+      {
+        static uint8_t key_cnt   = 0u;   /* 连续按下的拍数 */
+        static uint8_t key_armed = 1u;   /* 1 = 可以触发（松开后复位） */
+
+        if (start_key_down() != 0u)
+        {
+          if (key_cnt < 10u) { key_cnt++; }
+        }
+        else
+        {
+          key_cnt   = 0u;
+          key_armed = 1u;
+        }
+
+        /* 连续 3 拍（30ms）确认按下，松开才能再触发一次 */
+        if ((key_cnt >= 3u) && (key_armed != 0u))
+        {
+          key_armed = 0u;
+
+          MotorAdvance_Stop();
+          Mpu_Calibrate();     /* 车此刻静止，正好校准零偏 */
+          Trace_Start();
+        }
+      }
+
+      /* 手动速度模式（串口发了数字）时不跑循迹，只跑速度环，
+       * 这样可以测速度环的阶跃响应。发 "c" 恢复循迹。 */
+      if (Dbg_IsManual() == 0u)
+      {
+        Trace_Tick();          /* 读灰度 + 陀螺仪 -> 设定目标速度 */
+      }
+      MotorAdvance_Tick();     /* 速度环 -> 下发 PWM */
     }
+
+    Dbg_Task();                /* 非阻塞，每轮调一次 */
 
     /* USER CODE END WHILE */
 
