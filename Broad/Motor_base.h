@@ -13,7 +13,7 @@ extern volatile uint8_t g_ctrl_tick;
  * （手转实测 ~56500，误差 ~0.9% 来自圈数判读，规格值是精确的，取规格值） */
 #define ENC_COUNTS_PER_REV  56000.0f
 #define WHEEL_DIAM_MM          65.0f    /* 轮子直径 */
-#define CTRL_PERIOD_MS         20.0f    /* 控制周期，和 TIM6 一致（PSC=167,ARR=9999 -> 84MHz/168/10000 = 20ms） */
+#define CTRL_PERIOD_MS         10.0f    /* 控制周期，和 TIM6 一致（PSC=83,ARR=9999 -> 84MHz/84/10000 = 10ms） */
 #define MM_PER_COUNT  (3.14159265f * WHEEL_DIAM_MM / ENC_COUNTS_PER_REV) //每一个脉冲对应多少毫米
 #define MM_S_PER_CNT  (MM_PER_COUNT * (1000.0f / CTRL_PERIOD_MS))        //换算mm/s
 

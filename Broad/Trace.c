@@ -34,7 +34,7 @@
  * 所以规定：距上次计数不足 LOSS_DEBOUNCE_MS 的丢线一律忽略、不计次。
  * 500ms = 400mm/s 下走 200mm，比两个直角弯之间的间距小，不会误吞。
  * 串口 "q500" 可改。 */
-#define LOSS_DEBOUNCE_MS_DEF  500u
+#define LOSS_DEBOUNCE_MS_DEF  470u
 uint16_t g_loss_debounce_ms = LOSS_DEBOUNCE_MS_DEF;
 
 /* 第 6 个弯之后，必须再走这么多毫米才允许数出第 7 个弯。
@@ -66,15 +66,15 @@ float g_slow_speed    = SLOW_SPEED_MM_S_DEF; /* 串口 "k300" 可改 */
  * ------------------------------------------------------------------------- */
 
 /* 正常循迹的基础车速 mm/s */
-#define BASE_MM_S_DEF       400.0f
+#define BASE_MM_S_DEF       500.0f
 
 /* 比例增益：每 1 个误差单位给多少 mm/s 的差速。误差范围 ±7 */
 #define KP_TRACE_DEF        30.0f
 
 /* 微分增益：作用在"每拍误差变化量"上，抑制摆动。太大对传感器跳变敏感
  * ★ 它没有除以采样周期，等效阻尼 = KD × CTRL_PERIOD_MS。
- *   周期 20ms → 10ms 时等效阻尼砍半，所以 KD 要翻倍（15 → 30）补回来。 */
-#define KD_TRACE_DEF        15.0f
+ *   周期 20ms → 10ms 时等效阻尼砍半，所以 KD 要翻倍（25 → 50）补回来。 */
+#define KD_TRACE_DEF            55.0f
 
 /* 丢线时的找线差速 mm/s */
 #define SEARCH_STEER_MM_S_DEF  340.0f
@@ -107,7 +107,7 @@ float g_search_steer    = SEARCH_STEER_MM_S_DEF;
 #define ISLAND_TURN_SIGN    (-1.0f)  /* +1 = 逆时针(左转)，-1 = 顺时针(右转) */
 #define ISLAND_TURN_SPEED_DEF   220.0f   /* 转向时的轮速 mm/s。串口 "t380" 可改
                                            * ★ 转向专用；转完会平滑升回 BASE */
-#define ISLAND_TURN_TICKS   40u      /* 转向超时 40×20ms = 800ms */
+#define ISLAND_TURN_TICKS   80u      /* 转向超时 80×10ms = 800ms */
 
 /* ---- 运行时可改的环岛实体 ---- */
 float g_island_turn_speed = ISLAND_TURN_SPEED_DEF;
@@ -151,10 +151,10 @@ float g_island_ramp_mm = ISLAND_RAMP_MM_DEF;
 /* ============================ 盲走（断线） ============================ */
 
 /* 盲走速度 mm/s —— 比循迹略慢，冲过断口更可控。串口 "l500" 可改 */
-#define BLIND_SPEED_MM_S_DEF   500.0f
+#define BLIND_SPEED_MM_S_DEF   600.0f
 
 /* 航向保持增益：每 1° 偏差给多少 mm/s 的差速。串口 "y7" 可改 */
-#define KP_YAW_DEF              12.0f
+#define KP_YAW_DEF              8.0f
 
 /* 航向环的速率阻尼（D 项）。直接用陀螺仪角速度，不用差分，噪声小。
  * 单位：(mm/s) / (°/s)

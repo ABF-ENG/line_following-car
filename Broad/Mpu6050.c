@@ -38,7 +38,7 @@
 #define MPU_GYRO_LSB_PER_DPS    65.5f
 
 #define MPU_I2C_TIMEOUT         20u
-#define MPU_DT_NOMINAL          0.02f
+#define MPU_DT_NOMINAL          0.01f
 
 /* ---------------- 内部状态 ---------------- */
 

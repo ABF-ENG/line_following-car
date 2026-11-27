@@ -31,9 +31,9 @@
 /* 积分限幅（折成占空比 %） */
 #define INTEG_MAX_DUTY       40.0f
 
-/* 目标斜坡：每拍(20ms)最多变化多少 mm/s。0 = 不限制
- * 60 mm/s per 20ms = 3000 mm/s² */
-#define TARGET_SLEW_PER_TICK 60.0f
+/* 目标斜坡：每拍(10ms)最多变化多少 mm/s。0 = 不限制
+ * 30 mm/s per 10ms = 3000 mm/s²（和 60 per 20ms 等价） */
+#define TARGET_SLEW_PER_TICK 30.0f
 
 /* 目标速度上限 mm/s，防止误传大数 */
 #define TARGET_MAX_MM_S      1200
@@ -47,7 +47,7 @@
 /* 堵转保护：占空比 >= 60% 且速度 < 50mm/s，连续 25 拍(500ms) -> 判堵转 */
 #define STALL_DUTY           60.0f
 #define STALL_SPEED          50.0f
-#define STALL_TICKS          25
+#define STALL_TICKS          50
 
 /* 控制周期（秒） */
 #define CTRL_S               (CTRL_PERIOD_MS * 0.001f)
