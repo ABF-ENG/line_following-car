@@ -26,7 +26,7 @@
  * 一直保持到盲走段走完（s_blind_done 置 1）再恢复 BASE。
  * 目的：盲走前的最后两个直角和断口本身都慢一点，冲出去的风险小很多。 */
 #define SLOW_AFTER_CORNER   5u          /* 第几个直角之后开始计里程 */
-#define SLOW_START_MM_DEF   1000.0f     /* 再走多少毫米开始减速 */
+#define SLOW_START_MM_DEF   1400.0f     /* 再走多少毫米开始减速 */
 #define SLOW_SPEED_MM_S_DEF 300.0f      /* 减速后的速度 */
 
 /* ==================== 丢线计数消抖 ====================
@@ -66,7 +66,7 @@ float g_slow_speed    = SLOW_SPEED_MM_S_DEF; /* 串口 "k300" 可改 */
  * ------------------------------------------------------------------------- */
 
 /* 正常循迹的基础车速 mm/s */
-#define BASE_MM_S_DEF       400.0f
+#define BASE_MM_S_DEF       420.0f
 
 /* 比例增益：每 1 个误差单位给多少 mm/s 的差速。误差范围 ±7 */
 #define KP_TRACE_DEF        30.0f
@@ -240,6 +240,22 @@ static uint8_t    s_skip_d      = 0u;    /* 1 = 这一拍不做微分 */
 static uint8_t    s_ramp_on     = 0u;    /* 1 = 正在从转向速度升回 BASE */
 static float      s_ramp_d0l    = 0.0f;
 static float      s_ramp_d0r    = 0.0f;
+
+/* ---- 盲走目标：用第 3~4 弯之间那段直道的航向 ----
+ * 那段直道和盲走段平行同向，所以直接拿它的航向当目标，
+ * 比"发车航向 + 180°"离得近得多 —— 零偏漂移窗口从 40 秒缩到 15 秒。 */
+static float      s_yaw_same    = 0.0f;  /* 那段直道录下来的航向（最近 N 个样本的平均） */
+static uint8_t    s_same_ok     = 0u;    /* 1 = 已经录到了 */
+static float      s_same_base   = 0.0f;  /* 第一个样本的航向，用来避开 ±180 折返 */
+static uint8_t    s_same_has    = 0u;    /* 1 = base 已经取过 */
+
+/* 只保留最近 SAME_AVG_N 个样本求平均 —— 这样用的是第 4 个弯之前
+ * 最后那段"已经走稳"的航向，离盲走入口最近，也把单点噪声平均掉了。
+ * 400mm/s、20ms 下 20 个样本 ≈ 0.4 秒 ≈ 160mm。 */
+#define SAME_AVG_N     20u
+static float      s_same_buf[SAME_AVG_N];
+static uint8_t    s_same_idx    = 0u;    /* 环形缓冲写指针 */
+static uint8_t    s_same_fill   = 0u;    /* 已填入的有效样本数（最多 SAME_AVG_N） */
 static float      s_error       = 0.0f;
 static float      s_steer       = 0.0f;
 static int16_t    s_tgt_l       = 0;
@@ -386,6 +402,17 @@ void Trace_Init(void)
     s_ramp_on    = 0u;
     s_ramp_d0l   = 0.0f;
     s_ramp_d0r   = 0.0f;
+    s_yaw_same   = 0.0f;
+    s_same_ok    = 0u;
+    s_same_base  = 0.0f;
+    s_same_has   = 0u;
+    s_same_idx   = 0u;
+    s_same_fill  = 0u;
+    {
+        uint8_t i;
+        for (i = 0u; i < SAME_AVG_N; i++) { s_same_buf[i] = 0.0f; }
+    }
+
     s_error      = 0.0f;
     s_steer      = 0.0f;
     s_tgt_l      = 0;
@@ -747,7 +774,17 @@ void Trace_Tick(void)
         s_edge_watch = 0u;
         /* 目标 = 发车航向 + 偏移角（赛道绝对方向），
          * 而不是"丢线瞬间的车头方向" —— 车进断口时可能正带着修正角。 */
-        s_yaw_ref    = norm180(s_yaw_start + BLIND_OFFSET_DEG);
+        /* 有第 3~4 弯之间那段直道的航向就用它（漂移窗口短 3 倍），
+         * 没有就退回"发车航向 + 偏移角"。
+         * BLIND_OFFSET_DEG 仍然当微调旋钮：填 180 = 不修正。 */
+        if (s_same_ok != 0u)
+        {
+            s_yaw_ref = norm180(s_yaw_same + (BLIND_OFFSET_DEG - 180.0f));
+        }
+        else
+        {
+            s_yaw_ref = norm180(s_yaw_start + BLIND_OFFSET_DEG);
+        }
         s_blind_tick = 0u;
         s_reacq      = 0u;
         s_error      = 0.0f;
@@ -769,6 +806,37 @@ void Trace_Tick(void)
     }
 
     /* ---------- 5) 正常循迹 ---------- */
+
+    /* 第 3 个弯之后到第 4 个弯之间那段直道，方向和盲走段平行同向 ——
+     * 在这里把航向录下来当盲走目标。
+     *   · 环形缓冲只保留最近 SAME_AVG_N 个样本 → 用的是第 4 个弯之前
+     *     最后那段已经走稳的航向，离盲走入口最近
+     *   · 求平均 → 把单点噪声和残余摆动平均掉
+     *   · 只在线跟得好、且车确实在直行（角速度小）时才采 */
+    if ((s_loss_ev == 3u) && (n >= 1u) && (n <= 4u) &&
+        (fabs_f(calc_error(s_mask)) < 1.5f) &&
+        (fabs_f(Mpu_GetYawRate()) < 20.0f))
+    {
+        float   y = Mpu_GetYaw();
+        float   sum = 0.0f;
+        uint8_t i;
+
+        if (s_same_has == 0u)
+        {
+            s_same_base = y;          /* 第一个样本定基准，避开 ±180 折返 */
+            s_same_has  = 1u;
+        }
+
+        s_same_buf[s_same_idx] = norm180(y - s_same_base);
+        s_same_idx = (uint8_t)((s_same_idx + 1u) % SAME_AVG_N);
+        if (s_same_fill < SAME_AVG_N) { s_same_fill++; }
+
+        for (i = 0u; i < s_same_fill; i++) { sum += s_same_buf[i]; }
+
+        s_yaw_same = norm180(s_same_base + (sum / (float)s_same_fill));
+        s_same_ok  = 1u;
+    }
+
     e = calc_error(s_mask);
 
 #if (TRACE_REVERSE != 0)

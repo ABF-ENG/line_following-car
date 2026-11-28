@@ -224,6 +224,7 @@ static void dbg_cmd_apply(void)
         case 'q': g_loss_debounce_ms  = (uint16_t)v; break; /* 丢线消抖 ms */
         case 'o': g_corner6_gap_mm    = v; break; /* 第6→7个弯最小间距 */
         case 'v': g_kd_yaw_rate       = v; break; /* 航向速率阻尼 */
+        case 'j': g_mpu_bias_adapt    = (v >= 0.5f) ? 1u : 0u; break; /* 零偏自动跟踪 */
 
         case 0:                                   /* 纯数字 = 手动速度 */
             s_manual = 1u;

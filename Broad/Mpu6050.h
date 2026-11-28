@@ -78,6 +78,7 @@ extern volatile float    g_mpu_gz;
 extern volatile float    g_mpu_yaw;
 extern volatile float    g_mpu_rate;
 extern volatile float    g_mpu_bias;
+extern volatile uint8_t  g_mpu_bias_adapt;   /* 1 = 零偏自动跟踪（温漂补偿），串口 "j0" 关闭 */
 
 /* 扫描总线 0x08~0x77，结果放在 g_mpu_scan_cnt / g_mpu_scan_first。
  * g_mpu_ok = 0 且 g_mpu_who = 0 时调用它，区分"没器件"和"地址不对"。 */

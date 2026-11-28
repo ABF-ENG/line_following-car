@@ -46,6 +46,7 @@ static uint16_t s_addr    = 0u;
 static uint8_t  s_ready   = 0u;
 
 static float    s_bias_z  = 0.0f;
+volatile uint8_t g_mpu_bias_adapt = 1u;   /* 1 = 零偏自动跟踪（温漂补偿） */
 static float    s_yaw     = 0.0f;
 
 static float    s_gx      = 0.0f;
@@ -304,6 +305,23 @@ void Mpu_Update(void)
     s_gz = gz;
 
     s_rate_z = gz - s_bias_z;
+
+    /* ---- 零偏自动跟踪（温漂补偿）----
+     * 车在好好跟线时真实角速度 ≈ 0，此时读到的残差就是零偏误差。
+     * 只在 |角速度| < 1.5°/s 时更新，真实转弯不会被吃掉。
+     * 时间常数约 5 秒（100Hz × 0.002），跟得上温漂又不会误伤。
+     * 串口 "j0" 可关闭。 */
+    if (g_mpu_bias_adapt != 0u)
+    {
+        float r = s_rate_z;
+
+        if (r < 0.0f) { r = -r; }
+        if (r < 1.5f)
+        {
+            s_bias_z += 0.002f * s_rate_z;
+            s_rate_z  = gz - s_bias_z;      /* 更新后立刻生效 */
+        }
+    }
 
     now = HAL_GetTick();
     dt  = (float)(now - s_last_ms) * 0.001f;
